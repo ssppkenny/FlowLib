@@ -1,0 +1,9 @@
+**/*.pbxproj
+**/*.xcuserstate
+**/*.xcbkptlist
+Carthage/
+Index/
+Logs/
+build/
+opencv2.framework/
+
