@@ -16,6 +16,7 @@
 #import "FlowLib.h"
 #include "Enclosure.h"
 #include "PageSegmenter.h"
+#include "segmentation.h"
 #include "Reflow.h"
 #include "ddjvuapi.h"
 #include <iostream>
@@ -586,18 +587,23 @@ cv::Mat pix8ToMat(Pix *pix8)
         cv::Mat m = pix8ToMat(r);
         pixDestroy(&r);
         
-       
+        cv::Mat clone = m.clone();
+        std::vector<cv::Rect> new_rects = find_enclosing_rects(clone);
         
-        threshold(m, m, 0, 255, cv::THRESH_BINARY_INV | cv::THRESH_OTSU);
+        std::map<int, std::vector<std::vector<int>>> belongs = detect_captions(clone, new_rects);
+        std::vector<cv::Rect> rects_with_joined_captions;
+        std::vector<int> pic_indexes = join_with_captions(belongs, new_rects, rects_with_joined_captions);
         
-        
-        cv:Mat rotated_with_pictures;
-        std::vector<glyph> pic_glyphs = preprocess(m, rotated_with_pictures);
-        
-        cv::Mat new_image;// = cvMat;
-        reflow(m, new_image, scale, pic_glyphs, rotated_with_pictures, pageWidth);
-        //cvMat.release();
-        
+        std::vector<cv::Rect> filtered_rects;
+        std::vector<cv::Rect> pictures;
+        for (int i=0;i<rects_with_joined_captions.size(); i++) {
+            if (std::find(pic_indexes.begin(), pic_indexes.end(), i) == pic_indexes.end()) {
+                filtered_rects.push_back(rects_with_joined_captions[i]);
+            } else {
+                pictures.push_back(rects_with_joined_captions[i]);
+            }
+        }
+        cv::Mat new_image = filtered_rects.size() < 10 ? m : find_reflowed_image(filtered_rects, pictures, 1.0f, scale, m);
         
         NSData* data = [NSData dataWithBytes:new_image.data length:new_image.elemSize()*new_image.total()];
         CGBitmapInfo bitmapInfo = flow ? kCGImageAlphaNone|kCGBitmapByteOrderDefault : kCGImageAlphaNoneSkipLast|kCGBitmapByteOrderDefault;
@@ -614,8 +620,7 @@ cv::Mat pix8ToMat(Pix *pix8)
         //CGImageRelease(image);
         
         return im;
-        
-        
+
         
     } else if([filePath hasSuffix:@".djvu"]) {
         
@@ -657,13 +662,24 @@ cv::Mat pix8ToMat(Pix *pix8)
         
         cv::Mat m = pix8ToMat(r);
         
-        threshold(m, m, 0, 255, cv::THRESH_BINARY_INV | cv::THRESH_OTSU);
+        cv::Mat clone = m.clone();
+        std::vector<cv::Rect> new_rects = find_enclosing_rects(clone);
         
-        cv::Mat rotated_with_pictures;
-        std::vector<glyph> pic_glyphs = preprocess(m, rotated_with_pictures);
-        cv::Mat new_image;
+        std::map<int, std::vector<std::vector<int>>> belongs = detect_captions(clone, new_rects);
+        std::vector<cv::Rect> rects_with_joined_captions;
+        std::vector<int> pic_indexes = join_with_captions(belongs, new_rects, rects_with_joined_captions);
         
-        reflow(m, new_image, scale, pic_glyphs, rotated_with_pictures, pageWidth);
+        std::vector<cv::Rect> filtered_rects;
+        std::vector<cv::Rect> pictures;
+        for (int i=0;i<rects_with_joined_captions.size(); i++) {
+            if (std::find(pic_indexes.begin(), pic_indexes.end(), i) == pic_indexes.end()) {
+                filtered_rects.push_back(rects_with_joined_captions[i]);
+            } else {
+                pictures.push_back(rects_with_joined_captions[i]);
+            }
+        }
+        cv::Mat new_image = filtered_rects.size() < 10 ? m : find_reflowed_image(filtered_rects, pictures, 1.0f, scale, m);
+        
         NSData* data = [NSData dataWithBytes:new_image.data length:new_image.elemSize()*new_image.total()];
         CGBitmapInfo bitmapInfo = flow ? kCGImageAlphaNone|kCGBitmapByteOrderDefault : kCGImageAlphaNoneSkipLast|kCGBitmapByteOrderDefault;
         

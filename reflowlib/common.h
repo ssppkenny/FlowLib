@@ -13,6 +13,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/imgcodecs/imgcodecs.hpp>
+#include <opencv2/photo.hpp>
 
 #include <boost/range/algorithm/copy.hpp>
 #include <boost/range/adaptor/copied.hpp>
@@ -26,6 +27,8 @@
 #include <vector>
 #include <tuple>
 #include <map>
+#include <unordered_map>
+#include <numeric>
 #include <vector>
 #include <array>
 #include <set>
@@ -37,6 +40,8 @@
 
 #include "ddjvuapi.h"
 #include "miniexp.h"
+
+#include <allheaders.h>
 
 #define APPNAME "FLOW-READER"
 
@@ -83,6 +88,10 @@ bool compare_slices(const cv::Rect &lhs, const cv::Rect &rhs) {
 
 bool contour_intersects_rect(std::vector<cv::Point> contour, cv::Rect rect);
 
+Pix *mat8ToPix(cv::Mat *mat8);
+
+cv::Mat pix8ToMat(Pix *pix8);
+
 std::pair<std::vector<int>,std::vector<float>> make_hist(std::vector<int>& v, int num_buckets, int min, int max);
 
 double deviation(vector<int> v, double ave);
@@ -104,6 +113,20 @@ int max_ind(std::vector<std::tuple<int,int>> zr);
 int strlen16(char16_t* strarg);
 
 std::vector<glyph> get_glyphs(cv::Mat mat);
+
+template<typename T>
+std::vector<std::pair<T, T>> all_pairs(
+    std::vector<T> intervals) {
+    int size = intervals.size();
+    std::vector<std::pair<T, T>> return_value;
+    for (int i = 0; i < size; i++) {
+        for (int j = i + 1; j < size; j++) {
+            return_value.push_back(
+                std::make_pair(intervals.at(i), intervals.at(j)));
+        }
+    }
+    return return_value;
+}
 
 
 #endif
